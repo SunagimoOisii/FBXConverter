@@ -1,4 +1,5 @@
 #include <iostream>
+#include <functional>
 
 #include <fbxsdk.h>
 using namespace fbxsdk;
@@ -12,54 +13,84 @@ using namespace fbxsdk;
 #include "MeshData.h"
 #include "MeshExtractor.h"
 
+/// <summary>
+/// ã‚¨ãƒ©ãƒ¼ã¾ãŸã¯ä¿å­˜å®Œäº†æ™‚ã€ã‚­ãƒ¼å…¥åŠ›ã‚’ã‚‚ã£ã¦çµ‚äº†ã™ã‚‹ãŸã‚ã«ä½¿ç”¨
+/// </summary>
+static void WaitKey()
+{
+	//2å›è¡Œã†ã®ã¯æ”¹è¡Œå¯¾ç­–ã®ãŸã‚
+	std::cin.get();
+	std::cin.get();
+}
+
 int main()
 {
 	std::cout << "FBXMeshConverter" << std::endl;
 
-	//“Ç‚İ‚İFBXƒtƒ@ƒCƒ‹–¼‚ğæ“¾
+	//èª­ã¿è¾¼ã¿FBXãƒ•ã‚¡ã‚¤ãƒ«åã‚’å–å¾—
 	std::string srcFileName;
 	std::cout << "Input 3DModel FileName(with extension) = ";
 	std::cin >> srcFileName;
 	srcFileName = SRC_FILEPATH + srcFileName;
 
-	//o—ÍFBXƒtƒ@ƒCƒ‹–¼‚ğæ“¾
+	//å‡ºåŠ›FBXãƒ•ã‚¡ã‚¤ãƒ«åã‚’å–å¾—
 	std::string dstFileName;
 	std::cout << "Output fbfix fileName = ";
 	std::cin >> dstFileName;
 
-	//FBXƒ‰ƒCƒuƒ‰ƒŠ‚Ì€”õ
-	FbxManager*	   manager   = FbxManager::Create();
-	FbxIOSettings* ioSetting = FbxIOSettings::Create(manager, IOSROOT);
-	FbxImporter*   importer  = FbxImporter::Create(manager, "");
+	//FBXãƒ©ã‚¤ãƒ–ãƒ©ãƒªã®æº–å‚™
+
+	//FbxObject::Destroy()ã¯ãƒ¡ãƒ³ãƒé–¢æ•°ã®ãŸã‚ã€decltype(&FbxManager::Destroy)ã¯
+	//ãƒ¡ãƒ³ãƒé–¢æ•°ãƒã‚¤ãƒ³ã‚¿ã¨ãªã‚Šã€ã‚«ã‚¹ã‚¿ãƒ ãƒ‡ãƒªãƒ¼ã‚¿ã«ã¯é©ç”¨ã§ããªã„ã€‚
+	//ãã®ãŸã‚ã€functionã‚’ä½¿ç”¨ã™ã‚‹ã€‚
+	//ãƒ¡ãƒ³ãƒé–¢æ•°ãƒã‚¤ãƒ³ã‚¿:void (FbxObject::*)()  ã‚«ã‚¹ã‚¿ãƒ ãƒ‡ãƒªãƒ¼ã‚¿:void (*)(FbxObject*)
+	auto manager = std::unique_ptr<FbxManager, std::function<void(FbxManager*)>>
+		(
+			FbxManager::Create(), [](FbxManager* ptr) { ptr->Destroy(); }
+		);
+	auto ioSetting = std::unique_ptr<FbxIOSettings, std::function<void(FbxIOSettings*)>>
+		(
+			FbxIOSettings::Create(manager.get(), IOSROOT), [](FbxIOSettings* ptr) {ptr->Destroy();}
+		);
+	auto importer = std::unique_ptr<FbxImporter, std::function<void(FbxImporter*)>>
+		(
+			FbxImporter::Create(manager.get(), ""), [](FbxImporter* ptr) {ptr->Destroy();}
+		);
+
 	if (!importer->Initialize(srcFileName.c_str(), -1, manager->GetIOSettings()))
 	{
 		std::cout << "Fail to read the file: " << srcFileName.c_str() << std::endl;
 		importer->Destroy();
 		ioSetting->Destroy();
 		manager->Destroy();
+
+		std::cin.get();
 		return 1;
 	}
 
-	//ƒV[ƒ“æ“¾
-	FbxScene* scene = FbxScene::Create(manager, "scene");
-	importer->Import(scene);
+	//ã‚·ãƒ¼ãƒ³å–å¾—
+	auto scene = std::unique_ptr < FbxScene, std::function<void(FbxScene*)>>
+		(
+			FbxScene::Create(manager.get(), "scene"), [](FbxScene* ptr) {ptr->Destroy();}
+		);
+	importer->Import(scene.get());
 
-	//ƒgƒ|ƒƒW[®Œ`(OŠpŒ`‰»)
-	FbxGeometryConverter converter(manager);
-	converter.Triangulate(scene, true);
+	//ãƒˆãƒãƒ­ã‚¸ãƒ¼æ•´å½¢(ä¸‰è§’å½¢åŒ–)
+	FbxGeometryConverter converter(manager.get());
+	converter.Triangulate(scene.get(), true);
 
-	//ƒm[ƒhƒf[ƒ^‰ğÍ,ƒƒbƒVƒ…ƒŠƒXƒgæ“¾
+	//ãƒãƒ¼ãƒ‰ãƒ‡ãƒ¼ã‚¿è§£æ,ãƒ¡ãƒƒã‚·ãƒ¥ãƒªã‚¹ãƒˆå–å¾—
 	std::unordered_map<std::string, FbxNode*> meshList;
 	MeshExtractor::RetrieveMeshList(scene->GetRootNode(), meshList);
 
-	//ƒƒbƒVƒ…‚Ì‘I‘ğ(ƒXƒ^ƒeƒBƒbƒN‚©ƒAƒjƒ[ƒVƒ‡ƒ“‚©)
+	//ãƒ¡ãƒƒã‚·ãƒ¥ã®é¸æŠ(ã‚¹ã‚¿ãƒ†ã‚£ãƒƒã‚¯ã‹ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ã‹)
 	bool animMode = false;
 	char m;
 	std::cout << "AnimationMesh(y/n): ";
 	std::cin >> m;
 	animMode = (m == 'y') ? true : false;
 
-	//ƒXƒP[ƒ‹‚Æ‰ñ“]ˆ—
+	//ã‚¹ã‚±ãƒ¼ãƒ«ã¨å›è»¢å‡¦ç†
 	float scale, rotX, rotY, rotZ;
 	std::cout << "Scale: ";
 	std::cin >> scale;
@@ -70,7 +101,7 @@ int main()
 	std::cout << "RotZ: ";
 	std::cin >> rotZ;
 
-	if (animMode) //ƒAƒjƒ[ƒVƒ‡ƒ“ƒƒbƒVƒ…‚Ìˆ—
+	if (animMode) //ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ãƒ¡ãƒƒã‚·ãƒ¥æ™‚ã®å‡¦ç†
 	{
 		dstFileName += ".fbanim";
 
@@ -86,54 +117,40 @@ int main()
 			startTime, stopTime, fps))
 		{
 			std::cout << "Error: Failed to retrieve MeshData" << std::endl;
-			scene->Destroy();
-			importer->Destroy();
-			ioSetting->Destroy();
-			manager->Destroy();
+			WaitKey();
 			return 1;
 		}
 
 		if (!FileManager::SaveAnimMeshData(meshData, dstFileName, scale, rotX, rotY, rotZ))
 		{
 			std::cout << "Error: Failed to Save " << dstFileName << std::endl;
-			scene->Destroy();
-			importer->Destroy();
-			ioSetting->Destroy();
-			manager->Destroy();
+			WaitKey();
 			return 1;
 		}
 	}
-	else //ƒXƒ^ƒeƒBƒbƒNƒƒbƒVƒ…‚Ìˆ—
+	else //ã‚¹ã‚¿ãƒ†ã‚£ãƒƒã‚¯ãƒ¡ãƒƒã‚·ãƒ¥æ™‚ã®å‡¦ç†
 	{
 		dstFileName += ".fbfix";
 
-		//fbfix—pƒf[ƒ^‚Ìæ“¾(’¸“_,ƒCƒ“ƒfƒbƒNƒXî•ñAƒeƒNƒXƒ`ƒƒƒtƒ@ƒCƒ‹–¼)
+		//fbfixç”¨ãƒ‡ãƒ¼ã‚¿ã®å–å¾—(é ‚ç‚¹,ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹æƒ…å ±ã€ãƒ†ã‚¯ã‚¹ãƒãƒ£ãƒ•ã‚¡ã‚¤ãƒ«å)
 		std::vector<MeshData> meshData;
 		if (!MeshExtractor::ExtractMeshData(meshList, meshData))
 		{
 			std::cout << "Error: Failed to retrieve MeshData" << std::endl;
-			scene->Destroy();
-			importer->Destroy();
-			ioSetting->Destroy();
-			manager->Destroy();
+			WaitKey();
 			return 1;
 		}
 
-		//fbfixƒtƒ@ƒCƒ‹‚Ì•Û‘¶
+		//fbfixãƒ•ã‚¡ã‚¤ãƒ«ã®ä¿å­˜
 		if (!FileManager::SaveMeshData(meshData, dstFileName, scale, rotX, rotY, rotZ))
 		{
 			std::cout << "Error: Failed to Save " << dstFileName << std::endl;
-			scene->Destroy();
-			importer->Destroy();
-			ioSetting->Destroy();
-			manager->Destroy();
+			WaitKey();
 			return 1;
 		}
 	}
 
-	importer->Destroy();
-	ioSetting->Destroy();
-	manager->Destroy();
-
+	std::cout << "Completed to Save " << dstFileName << std::endl;
+	WaitKey();
 	return 0;
 }
