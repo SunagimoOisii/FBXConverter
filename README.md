@@ -3,18 +3,21 @@
 ## 目次
 - [概要と使用手順](#概要と使用手順)
 - [使用技術](#使用技術)
+- [工夫点](#工夫点)
 - [システム構成](#システム構成)
 - [プログラム　ピックアップ](#プログラム--ピックアップ)
 
 ## 概要と使用手順
-FBXファイルをFBFIXに変換するコンバータ<br>
-FBFIXはゲーム開発向けに最適化された独自の3Dデータファイルのこと<br><br>
+FBXファイルをFBFIXに変換するコンバータ。FBFIXはゲーム開発向けに最適化された独自の3Dデータファイルのこと。<br><br>
 システムの詳細や工夫点は以下からもご確認いただけます。また使用手順は以下の「使用手順」トピックでご確認いただけます。<br>
-[🔗 FBXConverter 詳細（Notionページ）](https://picturesque-kayak-ac4.notion.site/FBX-196281634a1680ba9dadc5c617618675?pvs=4)
+[🔗 FBXConverter 詳細(Notionページ)](https://picturesque-kayak-ac4.notion.site/FBX-196281634a1680ba9dadc5c617618675?pvs=4)
 
 ## 使用技術
 - FBX SDK
 - C++
+
+## 工夫点
+- unique_ptr + カスタムデリータでFBX SDKクラスの解放処理を簡潔にしている(`Main.cpp`)
 
 ## システム構成
 ``` mermaid
