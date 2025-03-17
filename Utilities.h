@@ -16,7 +16,7 @@ namespace Utilities
     void SetMatrixToContainer(const XMMATRIX& mat, std::vector<float>& v);
 
     /// <summary>
-    /// FbxAMatrixの内容をXMMATRIXにコピー
+    /// FbxAMatrix縺ｮ蜀�螳ｹ繧湛MMATRIX縺ｫ繧ｳ繝斐�ｼ
     /// </summary>
     void CopyMatrix(const FbxAMatrix& src, XMMATRIX& dst);
 
