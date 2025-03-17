@@ -2,7 +2,7 @@
 #include <cmath>
 
 /**********************************
-XMFLOAT2‰‰Zq
+XMFLOAT2æ¼”ç®—å­
 **********************************/
 
 XMFLOAT2 operator+(const XMFLOAT2& a, const XMFLOAT2& b) 
@@ -44,7 +44,7 @@ void operator*=(XMFLOAT2& a, float b)
 }
 
 /**********************************
-XMFLOAT3‰‰Zq
+XMFLOAT3æ¼”ç®—å­
 **********************************/
 
 XMFLOAT3 operator+(const XMFLOAT3& a, const XMFLOAT3& b)
